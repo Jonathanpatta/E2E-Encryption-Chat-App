@@ -2,7 +2,11 @@ import React, { useRef } from 'react'
 import { Container, Form, Button } from 'react-bootstrap'
 import { v4 as uuidV4 } from 'uuid'
 
-export default function Login({ onIdSubmit }) {
+
+
+
+
+export default function Login({ onIdSubmit, onKeySubmit }) {
   const idRef = useRef()
 
   function handleSubmit(e) {
@@ -12,7 +16,8 @@ export default function Login({ onIdSubmit }) {
   }
 
   function createNewId() {
-    onIdSubmit(uuidV4())
+    onIdSubmit(uuidV4());
+    onKeySubmit(uuidV4());
   }
 
   return (

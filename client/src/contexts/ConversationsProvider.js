@@ -3,13 +3,15 @@ import useLocalStorage from '../hooks/useLocalStorage';
 import { useContacts } from './ContactsProvider';
 import { useSocket } from './SocketProvider';
 
+var CryptoJS = require("crypto-js");
+
 const ConversationsContext = React.createContext()
 
 export function useConversations() {
   return useContext(ConversationsContext)
 }
 
-export function ConversationsProvider({ id, children }) {
+export function ConversationsProvider({ id, clientKey , children }) {
   const [conversations, setConversations] = useLocalStorage('conversations', [])
   const [selectedConversationIndex, setSelectedConversationIndex] = useState(0)
   const { contacts } = useContacts()
@@ -21,7 +23,25 @@ export function ConversationsProvider({ id, children }) {
     })
   }
 
-  const addMessageToConversation = useCallback(({ recipients, text, sender }) => {
+  const encryptMessage = (text,key) => {
+    return CryptoJS.AES.encrypt(text,key).toString();
+  }
+
+  const decryptMessage = (text,key) => {
+    return CryptoJS.AES.decrypt(text,key).toString(CryptoJS.enc.Utf8);
+  }
+
+  const addMessageToConversation = useCallback((data) => {
+
+    //{ recipients, text, sender }
+
+    var recipients = data.recipients;
+    var text = data.text;
+    var sender = data.sender;
+
+    
+
+    
     setConversations(prevConversations => {
       let madeChange = false
       const newMessage = { sender, text }
@@ -51,13 +71,20 @@ export function ConversationsProvider({ id, children }) {
   useEffect(() => {
     if (socket == null) return
 
-    socket.on('receive-message', addMessageToConversation)
+    socket.on('receive-message', (data) => {
+      data.text = decryptMessage(data.text,data.key);
+      addMessageToConversation(data);
+    })
 
     return () => socket.off('receive-message')
   }, [socket, addMessageToConversation])
 
   function sendMessage(recipients, text) {
-    socket.emit('send-message', { recipients, text })
+    var encryptedText = encryptMessage(text,clientKey);
+    
+
+    
+    socket.emit('send-message', { recipients, text:encryptedText, key:clientKey })
 
     addMessageToConversation({ recipients, text, sender: id })
   }

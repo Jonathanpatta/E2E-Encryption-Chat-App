@@ -7,7 +7,7 @@ export function useSocket() {
   return useContext(SocketContext)
 }
 
-export function SocketProvider({ id, children }) {
+export function SocketProvider({ id , children }) {
   const [socket, setSocket] = useState()
 
   useEffect(() => {

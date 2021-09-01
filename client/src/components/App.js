@@ -6,13 +6,19 @@ import { ContactsProvider } from '../contexts/ContactsProvider'
 import { ConversationsProvider } from '../contexts/ConversationsProvider';
 import { SocketProvider } from '../contexts/SocketProvider';
 
+
+
+
+
+
 function App() {
-  const [id, setId] = useLocalStorage('id')
+  const [id, setId] = useLocalStorage('id');
+  const [key, setKey] = useLocalStorage('key');
 
   const dashboard = (
     <SocketProvider id={id}>
       <ContactsProvider>
-        <ConversationsProvider id={id}>
+        <ConversationsProvider id={id} clientKey={key}>
           <Dashboard id={id} />
         </ConversationsProvider>
       </ContactsProvider>
@@ -20,7 +26,7 @@ function App() {
   )
 
   return (
-    id ? dashboard : <Login onIdSubmit={setId} />
+    id ? dashboard : <Login onIdSubmit={setId} onKeySubmit={setKey}/>
   )
 }
 
