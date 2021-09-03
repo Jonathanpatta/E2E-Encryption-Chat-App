@@ -7,18 +7,26 @@ export function useSocket() {
   return useContext(SocketContext)
 }
 
-export function SocketProvider({ id , children }) {
+export function SocketProvider(data) {
+  var id=data.id;
+  var clientPublicKey = data.keys?.publicKey ;
+  var children = data.children;
+
   const [socket, setSocket] = useState()
 
   useEffect(() => {
-    const newSocket = io(
+
+   
+    var newSocket;
+    newSocket = io(
       'http://localhost:5000',
-      { query: { id } }
+      { query: { id , key: clientPublicKey } }
     )
     setSocket(newSocket)
+    
 
     return () => newSocket.close()
-  }, [id])
+  }, [id,clientPublicKey])
 
   return (
     <SocketContext.Provider value={socket}>

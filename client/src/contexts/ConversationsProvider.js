@@ -72,6 +72,8 @@ export function ConversationsProvider({ id, clientKey , children }) {
     if (socket == null) return
 
     socket.on('receive-message', (data) => {
+
+      console.log(data.publicKey);
       data.text = decryptMessage(data.text,data.key);
       addMessageToConversation(data);
     })
@@ -84,7 +86,7 @@ export function ConversationsProvider({ id, clientKey , children }) {
     
 
     
-    socket.emit('send-message', { recipients, text:encryptedText, key:clientKey })
+    socket.emit('send-message', { recipients, text:encryptedText, key:clientKey, senderId:id })
 
     addMessageToConversation({ recipients, text, sender: id })
   }
