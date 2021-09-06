@@ -9,8 +9,9 @@ export function useSocket() {
 
 export function SocketProvider(data) {
   var id=data.id;
-  var clientPublicKey = data.keys?.publicKey ;
+  var clientPublicKey = data.keys?.publicKeyJwk ;
   var children = data.children;
+
 
   const [socket, setSocket] = useState()
 
@@ -20,13 +21,19 @@ export function SocketProvider(data) {
     var newSocket;
     newSocket = io(
       'http://localhost:5000',
-      { query: { id , key: clientPublicKey } }
+      {
+        withCredentials: true,
+        query: { 
+          id, 
+          publicKeyJwk: JSON.stringify(clientPublicKey) 
+        }
+      },
     )
     setSocket(newSocket)
     
 
     return () => newSocket.close()
-  }, [id,clientPublicKey])
+  }, [id,data.keys])
 
   return (
     <SocketContext.Provider value={socket}>

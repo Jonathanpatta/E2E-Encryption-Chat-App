@@ -3,7 +3,16 @@ import useLocalStorage from '../hooks/useLocalStorage';
 import { useContacts } from './ContactsProvider';
 import { useSocket } from './SocketProvider';
 
+import deriveKey from '../crypto/deriveKey';
+
+import encryptText from '../crypto/encryptText';
+import decryptText from '../crypto/decryptText';
+
+import axios from "axios"
+
 var CryptoJS = require("crypto-js");
+
+var crypto = require("crypto-browserify");
 
 const ConversationsContext = React.createContext()
 
@@ -11,7 +20,7 @@ export function useConversations() {
   return useContext(ConversationsContext)
 }
 
-export function ConversationsProvider({ id, clientKey , children }) {
+export function ConversationsProvider({ id, clientKey , myKeys , children }) {
   const [conversations, setConversations] = useLocalStorage('conversations', [])
   const [selectedConversationIndex, setSelectedConversationIndex] = useState(0)
   const { contacts } = useContacts()
@@ -30,6 +39,8 @@ export function ConversationsProvider({ id, clientKey , children }) {
   const decryptMessage = (text,key) => {
     return CryptoJS.AES.decrypt(text,key).toString(CryptoJS.enc.Utf8);
   }
+
+  
 
   const addMessageToConversation = useCallback((data) => {
 
@@ -72,21 +83,65 @@ export function ConversationsProvider({ id, clientKey , children }) {
     if (socket == null) return
 
     socket.on('receive-message', (data) => {
-
-      console.log(data.publicKey);
+      var otherPublicKeyJwk;
+      if(data.publicKeyJwk){
+        otherPublicKeyJwk = JSON.parse(data.publicKeyJwk.publicKeyJwk);
+      }
+      console.log(otherPublicKeyJwk);
+      //console.log(myKeys);
+      deriveKey(otherPublicKeyJwk,myKeys.privateKeyJwk).then(derivedKey => {
+        console.log("derived key:",derivedKey);
+        console.log("encoded text: ",encryptText("hello",derivedKey).then(res => console.log(res)))
+        if (data.encodedText){
+          decryptText(data.encodedText,deriveKey);
+        }
+      })
       data.text = decryptMessage(data.text,data.key);
+
+      
       addMessageToConversation(data);
     })
 
-    return () => socket.off('receive-message')
+    socket.on('get-key',(data) =>{
+
+    })
+
+    return () => {
+      socket.off('receive-message');
+      socket.off('get-key');
+    }
   }, [socket, addMessageToConversation])
 
   function sendMessage(recipients, text) {
     var encryptedText = encryptMessage(text,clientKey);
-    
 
     
-    socket.emit('send-message', { recipients, text:encryptedText, key:clientKey, senderId:id })
+
+    axios.get('http://localhost:5000/getkey',{
+      params:{id:recipients[0]},
+    })
+    //.then(res =>res.json())
+    .then(res => {
+      return JSON.parse(res.data.keyData.publicKeyJwk);
+    })
+    .then(pk => {
+      console.log("other public key",pk)
+      return deriveKey(pk,myKeys.privateKeyJwk);
+      
+    })
+    .then(derivedKey => {
+      console.log("derived key:",derivedKey);
+      encryptText("hello",derivedKey).then(res => console.log("encoded text:",res))
+      return encryptText(text,derivedKey);
+    })
+    .then(encodedText => {
+      socket.emit('send-message', { recipients, text:encryptedText, key:clientKey, senderId:id, encodedText })
+    })
+
+    console.log(id)
+
+    
+    
 
     addMessageToConversation({ recipients, text, sender: id })
   }

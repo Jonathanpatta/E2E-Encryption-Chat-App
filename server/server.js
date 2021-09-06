@@ -1,35 +1,87 @@
-const io = require('socket.io')(5000)
 
+
+
+
+const express = require("express");
+const app = express();
+const server = require('http').createServer(app);
+
+const cors = require("cors");
+
+app.use(cors({
+  origin: "*",
+  //methods: ["GET", "POST"],
+  credentials: true,
+}))
 
 var publicKeys = [];
 
-io.on('connection', socket => {
-  const id = socket.handshake.query.id;
-  const publicKey = socket.handshake.query.key;
-  if(id && publicKey){
+
+app.get("/getkey",(req,res) => {
+
+  var keyData = publicKeys.find(e => e.id === req.query.id);
+
+  console.log(keyData)
+
+  res.send({keyData});
+})
+
+
+
+
+const io = require('socket.io')(server,{
+  cors: {
+    origin: "http://localhost:5000",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["my-custom-header"],
+    credentials: true
+  }
+})
+
+function addOrUpdatePublicKey(id,publicKeyJwk){
+  if(id && publicKeyJwk){
 
     if(publicKeys.find(e => e.id === id)){
       publicKeys.forEach(e => {
         if(e.id === id){
-          e.key = publicKey;
+          e.publicKeyJwk = publicKeyJwk;
         }
       })
     }
     else{
-      publicKeys.push({id,key:publicKey});
+      publicKeys.push({id,publicKeyJwk});
     }
   }
+}
+
+io.on('connection', socket => {
+  const id = socket.handshake.query.id;
+  const publicKeyJwk = socket.handshake.query.publicKeyJwk;
+  //console.log("public jwk key", publicKeyJwk);
+  addOrUpdatePublicKey(id,publicKeyJwk)
   socket.join(id);
 
   
+  socket.on('set-key',(data) => {
+    addOrUpdatePublicKey(data.id,data.publicKeyJwk);
+  })
 
+  socket.on('get-key',(data) => {
+    var data = publicKeys.find(e => e.id === data.id);
+    console.log("get-key data:",data);
+    socket.emit('get-key',data);
+  })
   
 
   socket.on('send-message', (data) => {
-    console.log(data);
+    //console.log(data);
     data.recipients.forEach(recipient => {
       const newRecipients = data.recipients.filter(r => r !== recipient)
       newRecipients.push(id);
+      //console.log(data);
+
+      //console.log(publicKeys.filter(item => item.id === data.senderId));
+
 
       
       socket.broadcast.to(recipient).emit('receive-message', {
@@ -37,8 +89,13 @@ io.on('connection', socket => {
         sender: id, 
         text: data.text,
         key: data.key,
-        publicKey: publicKeys.filter(item => item.id === data.senderId),
+        publicKeyJwk: publicKeys.find(e => e.id === data.senderId),
+        encodedText:data.encodedText,
       })
     })
   })
 })
+
+
+
+server.listen(5000);
