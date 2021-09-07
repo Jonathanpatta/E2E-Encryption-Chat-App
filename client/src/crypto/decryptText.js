@@ -1,11 +1,10 @@
 
-export default async (messageJSON, derivedKey) => {
+export default async (messageText, derivedKey) => {
     try {
-      const message = JSON.parse(messageJSON);
-      const text = message.base64Data;
-      const initializationVector = new Uint8Array(message.initializationVector).buffer;
+
+      const initializationVector = new TextEncoder().encode("Initialization Vector")
   
-      const string = atob(text);
+      const string = atob(messageText);
       const uintArray = new Uint8Array(
         [...string].map((char) => char.charCodeAt(0))
       );

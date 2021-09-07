@@ -26,6 +26,23 @@ app.get("/getkey",(req,res) => {
   res.send({keyData});
 })
 
+app.get("/getkeys",(req,res) => {
+
+  keyData = []
+
+  
+  req.query.ids.forEach((id) => {
+    var key = publicKeys.find(e => e.id === id);
+
+    console.log("/getkeys:",key)
+    keyData.push(key);
+  })
+  res.send({keyData});
+})
+
+
+  
+
 
 
 
@@ -74,25 +91,46 @@ io.on('connection', socket => {
   
 
   socket.on('send-message', (data) => {
-    //console.log(data);
-    data.recipients.forEach(recipient => {
-      const newRecipients = data.recipients.filter(r => r !== recipient)
-      newRecipients.push(id);
-      //console.log(data);
+    console.log(data);
+    data.messageData.forEach(Message => {
+      var newRecipients = data.messageData.filter(r => r.toId !== Message.toId)
+      newRecipients = newRecipients.map(e => e.toId);
 
-      //console.log(publicKeys.filter(item => item.id === data.senderId));
+      newRecipients.push(id);
+      console.log(newRecipients);
+
+      var sendData = {
+          recipients: newRecipients, 
+          sender: id, 
+          publicKeyJwk: Message.publicKeyJwk,
+          encryptedMessage: Message.encryptedMessage,
+        }
+
+        console.log(sendData);
+
+      socket.broadcast.to(Message.toId).emit('receive-message', sendData)
+
+
+    })
+
+    // data.recipients.forEach(recipient => {
+    //   const newRecipients = data.recipients.filter(r => r !== recipient)
+    //   newRecipients.push(id);
+    //   //console.log(data);
+
+    //   //console.log(publicKeys.filter(item => item.id === data.senderId));
 
 
       
-      socket.broadcast.to(recipient).emit('receive-message', {
-        recipients: newRecipients, 
-        sender: id, 
-        text: data.text,
-        key: data.key,
-        publicKeyJwk: publicKeys.find(e => e.id === data.senderId),
-        encodedText:data.encodedText,
-      })
-    })
+    //   socket.broadcast.to(recipient).emit('receive-message', {
+    //     recipients: newRecipients, 
+    //     sender: id, 
+    //     text: data.text,
+    //     key: data.key,
+    //     publicKeyJwk: publicKeys.find(e => e.id === data.senderId),
+    //     encodedText:data.encodedText,
+    //   })
+    // })
   })
 })
 

@@ -83,62 +83,91 @@ export function ConversationsProvider({ id, clientKey , myKeys , children }) {
     if (socket == null) return
 
     socket.on('receive-message', (data) => {
-      var otherPublicKeyJwk;
-      if(data.publicKeyJwk){
-        otherPublicKeyJwk = JSON.parse(data.publicKeyJwk.publicKeyJwk);
-      }
-      console.log(otherPublicKeyJwk);
-      //console.log(myKeys);
-      deriveKey(otherPublicKeyJwk,myKeys.privateKeyJwk).then(derivedKey => {
-        console.log("derived key:",derivedKey);
-        console.log("encoded text: ",encryptText("hello",derivedKey).then(res => console.log(res)))
-        if (data.encodedText){
-          decryptText(data.encodedText,deriveKey);
-        }
-      })
-      data.text = decryptMessage(data.text,data.key);
-
+      // var otherPublicKeyJwk;
+      // if(data.publicKeyJwk){
+      //   otherPublicKeyJwk = JSON.parse(data.publicKeyJwk.publicKeyJwk);
+      // }
+      // console.log(otherPublicKeyJwk);
+      // //console.log(myKeys);
+      // deriveKey(otherPublicKeyJwk,myKeys.privateKeyJwk).then(derivedKey => {
+      //   //console.log("derived key:",derivedKey);
+      //   //console.log("encoded text: ",encryptText("hello",derivedKey).then(res => console.log(res)))
+      //   if (data.encodedText){
+      //     decryptText(data.encodedText,deriveKey);
+      //   }
+      // })
+      // data.text = decryptMessage(data.text,data.key);
       
-      addMessageToConversation(data);
+      console.log("received message data:",data)
+
+      if(data){
+        var otherPublicKeyJwk;
+        if(data.publicKeyJwk){
+          otherPublicKeyJwk = JSON.parse(data.publicKeyJwk);
+        }
+
+        deriveKey(otherPublicKeyJwk,myKeys.privateKeyJwk)
+          .then(derivedKey =>  decryptText(data.encryptedMessage,derivedKey))
+          .then(plainText => {
+            data.text = plainText;
+            addMessageToConversation(data);
+          })
+      }
     })
 
-    socket.on('get-key',(data) =>{
-
-    })
 
     return () => {
       socket.off('receive-message');
-      socket.off('get-key');
     }
   }, [socket, addMessageToConversation])
 
   function sendMessage(recipients, text) {
     var encryptedText = encryptMessage(text,clientKey);
 
+    axios.get('http://localhost:5000/getkeys',{
+      params:{ids:recipients}
+    }).then(res => {
+      
+      var keys = res.data.keyData
+      if(keys){
+
+
+          async function getMessageData(){
+            var messageData = [];
+            for(var i=0;i<keys.length;i++){
+              var item = keys[i];
+              var otherPublicKeyJwk = JSON.parse(item.publicKeyJwk);
+              await deriveKey(otherPublicKeyJwk,myKeys.privateKeyJwk)
+                .then(derivedKey => {
+                  return encryptText(text,derivedKey);
+                })
+                .then(encryptedMessage => {
+                  messageData.push({
+                    toId:item.id,
+                    encryptedMessage,
+                    publicKeyJwk: JSON.stringify(myKeys.publicKeyJwk),
+                  })
+                })
+            }
+            return messageData;
+          }
+
+
+          keys.forEach(item => {
+            
+            
+          })
+
+        getMessageData().then(e => socket.emit('send-message', { messageData:e }));
+
+        
+
+      }
+    })
+
     
 
-    axios.get('http://localhost:5000/getkey',{
-      params:{id:recipients[0]},
-    })
-    //.then(res =>res.json())
-    .then(res => {
-      return JSON.parse(res.data.keyData.publicKeyJwk);
-    })
-    .then(pk => {
-      console.log("other public key",pk)
-      return deriveKey(pk,myKeys.privateKeyJwk);
-      
-    })
-    .then(derivedKey => {
-      console.log("derived key:",derivedKey);
-      encryptText("hello",derivedKey).then(res => console.log("encoded text:",res))
-      return encryptText(text,derivedKey);
-    })
-    .then(encodedText => {
-      socket.emit('send-message', { recipients, text:encryptedText, key:clientKey, senderId:id, encodedText })
-    })
-
-    console.log(id)
+    
 
     
     
