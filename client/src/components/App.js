@@ -13,7 +13,6 @@ import { SocketProvider } from '../contexts/SocketProvider';
 
 function App() {
   const [id, setId] = useLocalStorage('id');
-  const [key, setKey] = useLocalStorage('key');
   
   const [dhKeys, setDhKeys] = useLocalStorage('dhkey');
 
@@ -22,7 +21,7 @@ function App() {
     
     <SocketProvider id={id} keys={dhKeys}>
       <ContactsProvider>
-        <ConversationsProvider id={id} clientKey={key} myKeys={dhKeys}>
+        <ConversationsProvider id={id}  myKeys={dhKeys}>
           <Dashboard id={id} />
         </ConversationsProvider>
       </ContactsProvider>
@@ -33,7 +32,7 @@ function App() {
 
   return (
     <SocketProvider id={id} keys={dhKeys}>
-      {id ? dashboard : <Login onIdSubmit={setId} onKeySubmit={setKey} onDHKeySubmit={setDhKeys}/>}
+      {id ? dashboard : <Login onIdSubmit={setId} onDHKeySubmit={setDhKeys}/>}
     </SocketProvider>
       
       
