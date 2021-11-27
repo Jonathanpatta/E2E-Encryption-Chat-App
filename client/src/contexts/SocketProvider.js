@@ -33,7 +33,7 @@ export function SocketProvider(data) {
     
 
     return () => newSocket.close()
-  }, [id,data.keys])
+  }, [id,clientPublicKey])
 
   return (
     <SocketContext.Provider value={socket}>

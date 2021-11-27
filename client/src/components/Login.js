@@ -3,6 +3,10 @@ import { Container, Form, Button } from 'react-bootstrap'
 import { v4 as uuidV4 } from 'uuid'
 
 import generateKeyPair from '../crypto/generateKeyPair';
+import signText from '../crypto/signText';
+
+import verifyText from '../crypto/verifyText';
+import generateSignatureKeyPair from '../crypto/generateSignatureKeyPair';
 
 
 
@@ -22,6 +26,24 @@ export default function Login({ onIdSubmit, onDHKeySubmit}) {
     generateKeyPair().then(data => {
       onDHKeySubmit(data);
     });
+
+    async function example ()  {
+
+      let keyPair = await generateSignatureKeyPair();
+
+      console.log(keyPair);
+
+
+      //let keyPair = await generateKeyPair();
+
+      console.log(keyPair);
+      var sign = await signText("message",keyPair.privateKey);
+
+      console.log("signature:",sign);
+      var verified = await verifyText("message",sign ,keyPair.publicKey);
+      console.log(verified);
+    }
+    example()
 
   }
 

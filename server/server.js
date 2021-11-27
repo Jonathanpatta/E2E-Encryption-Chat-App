@@ -27,10 +27,12 @@ app.get("/getkeys",(req,res) => {
   
   req.query.ids.forEach((id) => {
     var key = publicKeys.find(e => e.id === id);
-
-    console.log("/getkeys:",key)
-    keyData.push(key);
+    if (key){
+      keyData.push(key);
+    }
   })
+
+  console.log("getkeys: ",keyData);
   res.send({keyData});
 })
 
@@ -68,8 +70,10 @@ function addOrUpdatePublicKey(id,publicKeyJwk){
 io.on('connection', socket => {
   const id = socket.handshake.query.id;
   const publicKeyJwk = socket.handshake.query.publicKeyJwk;
-  addOrUpdatePublicKey(id,publicKeyJwk)
+  addOrUpdatePublicKey(id,publicKeyJwk);
   socket.join(id);
+
+  console.log(id+" connected!")
 
   
   socket.on('set-key',(data) => {
@@ -87,13 +91,18 @@ io.on('connection', socket => {
       var newRecipients = data.messageData.filter(r => r.toId !== Message.toId)
       newRecipients = newRecipients.map(e => e.toId);
 
+
       newRecipients.push(id);
+
+      console.log(id);
+      console.log("recepients:",newRecipients);
 
       var sendData = {
           recipients: newRecipients, 
           sender: id, 
           publicKeyJwk: Message.publicKeyJwk,
           encryptedMessage: Message.encryptedMessage,
+          sentTime: Message.sentTime,
         }
 
       socket.broadcast.to(Message.toId).emit('receive-message', sendData)

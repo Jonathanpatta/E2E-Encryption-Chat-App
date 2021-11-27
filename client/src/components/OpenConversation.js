@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import { Form, InputGroup, Button } from 'react-bootstrap'
 import { useConversations } from '../contexts/ConversationsProvider';
+import moment from 'moment';
 
 export default function OpenConversation() {
   const [text, setText] = useState('')
@@ -35,10 +36,10 @@ export default function OpenConversation() {
               >
                 <div
                   className={`rounded px-2 py-1 ${message.fromMe ? 'bg-primary text-white' : 'border'}`}>
-                  {message.text}
+                      {message.text}
                 </div>
                 <div className={`text-muted small ${message.fromMe ? 'text-right' : ''}`}>
-                  {message.fromMe ? 'You' : message.senderName}
+                  {message.fromMe ? 'You' : message.senderName}{" on "+moment(message.sentTime).format('lll')}
                 </div>
               </div>
             )

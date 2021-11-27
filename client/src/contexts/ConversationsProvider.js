@@ -35,13 +35,14 @@ export function ConversationsProvider({ id, myKeys , children }) {
     var recipients = data.recipients;
     var text = data.text;
     var sender = data.sender;
+    var sentTime = data.sentTime;
 
     
 
     
     setConversations(prevConversations => {
       let madeChange = false
-      const newMessage = { sender, text }
+      const newMessage = { sender, text , sentTime}
       const newConversations = prevConversations.map(conversation => {
         if (arrayEquality(conversation.recipients, recipients)) {
           madeChange = true
@@ -69,6 +70,9 @@ export function ConversationsProvider({ id, myKeys , children }) {
     if (socket == null) return
 
     socket.on('receive-message', (data) => {
+      var timeNow = performance.now();
+      
+      console.log(Date.now()-data.sentTime);
 
       if(data){
         var otherPublicKeyJwk;
@@ -80,6 +84,7 @@ export function ConversationsProvider({ id, myKeys , children }) {
           .then(derivedKey =>  decryptText(data.encryptedMessage,derivedKey))
           .then(plainText => {
             data.text = plainText;
+            console.log(performance.now()-timeNow);
             addMessageToConversation(data);
           })
       }
@@ -98,23 +103,32 @@ export function ConversationsProvider({ id, myKeys , children }) {
     }).then(res => {
       
       var keys = res.data.keyData
+      console.log(keys);
       if(keys){
 
 
           async function getMessageData(){
             var messageData = [];
+
+            console.log(keys);  
+            
             for(var i=0;i<keys.length;i++){
               var item = keys[i];
-              var otherPublicKeyJwk = JSON.parse(item.publicKeyJwk);
+
+              console.log(item);
+              var otherPublicKeyJwk = item.publicKeyJwk?JSON.parse(item.publicKeyJwk):"no public key";
+
               await deriveKey(otherPublicKeyJwk,myKeys.privateKeyJwk)
                 .then(derivedKey => {
                   return encryptText(text,derivedKey);
                 })
                 .then(encryptedMessage => {
+                  
                   messageData.push({
-                    toId:item.id,
+                    toId: item.id?item.id:"no id",
                     encryptedMessage,
                     publicKeyJwk: JSON.stringify(myKeys.publicKeyJwk),
+                    sentTime:Date.now(),
                   })
                 })
             }
@@ -125,7 +139,7 @@ export function ConversationsProvider({ id, myKeys , children }) {
       }
     })
 
-    addMessageToConversation({ recipients, text, sender: id })
+    addMessageToConversation({ recipients, text, sender: id , sentTime:Date.now()})
   }
 
   const formattedConversations = conversations.map((conversation, index) => {
